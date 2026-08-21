@@ -1,0 +1,55 @@
+fairness_matrix:
+  cognodb:
+    name: "CognoDB Cloud"
+    deployment_type: "cloud_managed"
+    resource_source: "cloud_provider_tier"
+    cpu: "not configured"
+    ram: "not configured"
+    storage: "not configured"
+    version: "not configured"
+    region: "not configured"
+    notes: "Managed free tier instance"
+
+  neo4j:
+    name: "Neo4j"
+    deployment_type: "docker_local"
+    resource_source: "container_limits"
+    cpu: "not configured"
+    ram: "not configured"
+    storage: "not configured"
+    version: "not configured"
+    region: "local"
+    notes: "Community edition container"
+
+  memgraph:
+    name: "Memgraph"
+    deployment_type: "docker_local"
+    resource_source: "container_limits"
+    cpu: "not configured"
+    ram: "not configured"
+    storage: "not configured"
+    version: "not configured"
+    region: "local"
+    notes: "In-memory graph database container"
+
+  falkordb:
+    name: "FalkorDB"
+    deployment_type: "docker_local"
+    resource_source: "container_limits"
+    cpu: "not configured"
+    ram: "not configured"
+    storage: "not configured"
+    version: "not configured"
+    region: "local"
+    notes: "Low-latency in-memory graph database"
+
+  arangodb:
+    name: "ArangoDB"
+    deployment_type: "docker_local"
+    resource_source: "container_limits"
+    cpu: "not configured"
+    ram: "not configured"
+    storage: "not configured"
+    version: "not configured"
+    region: "local"
+    notes: "Multi-model graph database container"

@@ -1,0 +1,40 @@
+databases:
+  cognodb:
+    name: "CognoDB Cloud"
+    adapter: "databases.cognodb.CognoDBAdapter"
+    deployment_type: "cloud_managed"
+    enabled: true
+    protocol: "bolt+s"
+    query_language: "cypher"
+
+  neo4j:
+    name: "Neo4j"
+    adapter: "databases.neo4j.Neo4jAdapter"
+    deployment_type: "docker_local"
+    enabled: false
+    protocol: "bolt"
+    query_language: "cypher"
+
+  memgraph:
+    name: "Memgraph"
+    adapter: "databases.memgraph.MemgraphAdapter"
+    deployment_type: "docker_local"
+    enabled: false
+    protocol: "bolt"
+    query_language: "cypher"
+
+  falkordb:
+    name: "FalkorDB"
+    adapter: "databases.falkordb.FalkorDBAdapter"
+    deployment_type: "docker_local"
+    enabled: false
+    protocol: "redis_graph"
+    query_language: "cypher"
+
+  arangodb:
+    name: "ArangoDB"
+    adapter: "databases.arangodb.ArangoDBAdapter"
+    deployment_type: "docker_local"
+    enabled: false
+    protocol: "http"
+    query_language: "aql"

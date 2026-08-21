@@ -1,2 +1,5 @@
 neo4j==5.28.1
 python-dotenv==1.0.1
+pyyaml==6.0.2
+falkordb==1.7.1
+python-arango==8.1.1

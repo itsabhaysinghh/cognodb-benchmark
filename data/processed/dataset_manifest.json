@@ -1,0 +1,13 @@
+{
+  "dataset_name": "SNAP Wiki-Vote",
+  "source": "Stanford SNAP",
+  "raw_file": "data/raw/Wiki-Vote.txt",
+  "node_count": 7115,
+  "relationship_count": 103689,
+  "graph_type": "directed",
+  "relationship_type": "VOTED_FOR",
+  "validation_status": "passed",
+  "raw_file_sha256": "d2afbedf262126f820c6b3dd9f39a6d68e6f5ea839c0508297032ca77578b28a",
+  "nodes_file_sha256": "713f082a7b1c25bb0f61f1bb9432fbcb2270505d97de8e51087134996820a01a",
+  "relationships_file_sha256": "ba160b3d17f8d11469ebcc95364c5205e889ce934a3539d88d93e7037b1a8ebf"
+}
