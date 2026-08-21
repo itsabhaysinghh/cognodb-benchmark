@@ -1,5 +1,6 @@
+import csv
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from falkordb import FalkorDB
 from databases.base import BaseDatabaseAdapter
 
@@ -47,13 +48,60 @@ class FalkorDBAdapter(BaseDatabaseAdapter):
         pass
 
     def create_indexes(self) -> None:
-        pass
+        if not self.graph:
+            self.connect()
+        try:
+            self.graph.query("CREATE INDEX FOR (u:User) ON (u.id)")
+        except Exception:
+            pass
 
-    def load_nodes(self, file_path: str) -> int:
-        pass
+    def load_nodes(self, file_path: str, batch_size: int = 1000) -> int:
+        if not self.graph:
+            self.connect()
+        total = 0
+        batch = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                batch.append({"id": int(row["id"])})
+                if len(batch) >= batch_size:
+                    self._insert_node_batch(batch)
+                    total += len(batch)
+                    batch = []
+            if batch:
+                self._insert_node_batch(batch)
+                total += len(batch)
+        return total
 
-    def load_relationships(self, file_path: str) -> int:
-        pass
+    def _insert_node_batch(self, batch: List[Dict[str, Any]]) -> None:
+        query = "UNWIND $batch AS row CREATE (u:User {id: row.id})"
+        self.graph.query(query, {"batch": batch})
+
+    def load_relationships(self, file_path: str, batch_size: int = 1000) -> int:
+        if not self.graph:
+            self.connect()
+        total = 0
+        batch = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                batch.append({"source_id": int(row["source_id"]), "target_id": int(row["target_id"])})
+                if len(batch) >= batch_size:
+                    self._insert_rel_batch(batch)
+                    total += len(batch)
+                    batch = []
+            if batch:
+                self._insert_rel_batch(batch)
+                total += len(batch)
+        return total
+
+    def _insert_rel_batch(self, batch: List[Dict[str, Any]]) -> None:
+        query = (
+            "UNWIND $batch AS row "
+            "MATCH (s:User {id: row.source_id}), (t:User {id: row.target_id}) "
+            "CREATE (s)-[:VOTED_FOR]->(t)"
+        )
+        self.graph.query(query, {"batch": batch})
 
     def run_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
         if not self.graph:
@@ -62,12 +110,22 @@ class FalkorDBAdapter(BaseDatabaseAdapter):
         return result.result_set
 
     def get_database_info(self) -> Dict[str, Any]:
+        version = "not configured"
+        if self.is_configured():
+            try:
+                if not self.graph:
+                    self.connect()
+                info = self.graph.query("CALL db.info()")
+                if info and info.result_set:
+                    version = "FalkorDB Community"
+            except Exception:
+                pass
         return {
             "name": self.name,
             "configured": self.is_configured(),
             "query_language": "cypher",
             "protocol": "redis_graph",
-            "version": "not configured",
+            "version": version,
             "edition": "community"
         }
 
@@ -84,3 +142,25 @@ class FalkorDBAdapter(BaseDatabaseAdapter):
                 self.graph.delete()
             except Exception:
                 pass
+
+    def validate_load(self, expected_nodes: int = 7115, expected_rels: int = 103689) -> Tuple[bool, Dict[str, Any]]:
+        if not self.graph:
+            self.connect()
+        res_nodes = self.graph.query("MATCH (n:User) RETURN count(n) AS cnt")
+        nodes_cnt = res_nodes.result_set[0][0] if res_nodes and res_nodes.result_set else 0
+        res_rels = self.graph.query("MATCH ()-[r:VOTED_FOR]->() RETURN count(r) AS cnt")
+        rels_cnt = res_rels.result_set[0][0] if res_rels and res_rels.result_set else 0
+        res_valid_rels = self.graph.query("MATCH (s:User)-[r:VOTED_FOR]->(t:User) RETURN count(r) AS cnt")
+        valid_rels_cnt = res_valid_rels.result_set[0][0] if res_valid_rels and res_valid_rels.result_set else 0
+        nodes_ok = nodes_cnt == expected_nodes
+        rels_ok = rels_cnt == expected_rels
+        valid_endpoints = valid_rels_cnt == expected_rels
+        valid = nodes_ok and rels_ok and valid_endpoints
+        return valid, {
+            "node_count": nodes_cnt,
+            "relationship_count": rels_cnt,
+            "valid_endpoints_count": valid_rels_cnt,
+            "expected_nodes": expected_nodes,
+            "expected_relationships": expected_rels,
+            "valid": valid
+        }

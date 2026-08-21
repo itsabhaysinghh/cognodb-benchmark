@@ -3,3 +3,5 @@ python-dotenv==1.0.1
 pyyaml==6.0.2
 falkordb==1.7.1
 python-arango==8.1.1
+matplotlib>=3.8.0
+reportlab>=4.0.0

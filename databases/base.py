@@ -1,6 +1,11 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+from dotenv import load_dotenv
+
+project_root = Path(__file__).resolve().parent.parent
+load_dotenv(project_root / ".env")
 
 class BaseDatabaseAdapter(ABC):
 
@@ -54,6 +59,10 @@ class BaseDatabaseAdapter(ABC):
 
     @abstractmethod
     def cleanup(self) -> None:
+        pass
+
+    @abstractmethod
+    def validate_load(self, expected_nodes: int = 7115, expected_rels: int = 103689) -> Tuple[bool, Dict[str, Any]]:
         pass
 
     def __enter__(self):

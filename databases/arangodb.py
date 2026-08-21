@@ -1,5 +1,6 @@
+import csv
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from arango import ArangoClient
 from databases.base import BaseDatabaseAdapter
 
@@ -40,16 +41,68 @@ class ArangoDBAdapter(BaseDatabaseAdapter):
             return False
 
     def create_schema(self) -> None:
-        pass
+        if not self.db:
+            self.connect()
+        if not self.db.has_collection("users"):
+            self.db.create_collection("users")
+        if not self.db.has_collection("voted_for"):
+            self.db.create_collection("voted_for", edge=True)
 
     def create_indexes(self) -> None:
-        pass
+        if not self.db:
+            self.connect()
+        self.create_schema()
+        users_col = self.db.collection("users")
+        users_col.add_persistent_index(fields=["id"], unique=True)
 
-    def load_nodes(self, file_path: str) -> int:
-        pass
+    def load_nodes(self, file_path: str, batch_size: int = 1000) -> int:
+        if not self.db:
+            self.connect()
+        self.create_schema()
+        users_col = self.db.collection("users")
+        total = 0
+        batch = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                node_id = int(row["id"])
+                batch.append({"_key": str(node_id), "id": node_id})
+                if len(batch) >= batch_size:
+                    users_col.insert_many(batch, overwrite=True)
+                    total += len(batch)
+                    batch = []
+            if batch:
+                users_col.insert_many(batch, overwrite=True)
+                total += len(batch)
+        return total
 
-    def load_relationships(self, file_path: str) -> int:
-        pass
+    def load_relationships(self, file_path: str, batch_size: int = 1000) -> int:
+        if not self.db:
+            self.connect()
+        self.create_schema()
+        voted_col = self.db.collection("voted_for")
+        total = 0
+        batch = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                src = row["source_id"]
+                dst = row["target_id"]
+                batch.append({
+                    "_from": f"users/{src}",
+                    "_to": f"users/{dst}",
+                    "source_id": int(src),
+                    "target_id": int(dst),
+                    "relationship_type": "VOTED_FOR"
+                })
+                if len(batch) >= batch_size:
+                    voted_col.insert_many(batch)
+                    total += len(batch)
+                    batch = []
+            if batch:
+                voted_col.insert_many(batch)
+                total += len(batch)
+        return total
 
     def run_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
         if not self.db:
@@ -58,12 +111,21 @@ class ArangoDBAdapter(BaseDatabaseAdapter):
         return list(cursor)
 
     def get_database_info(self) -> Dict[str, Any]:
+        version = "not configured"
+        if self.is_configured():
+            try:
+                if not self.db:
+                    self.connect()
+                ver = self.db.version()
+                version = f"ArangoDB {ver}"
+            except Exception:
+                pass
         return {
             "name": self.name,
             "configured": self.is_configured(),
             "query_language": "aql",
             "protocol": "http",
-            "version": "not configured",
+            "version": version,
             "edition": "community"
         }
 
@@ -75,4 +137,26 @@ class ArangoDBAdapter(BaseDatabaseAdapter):
         }
 
     def cleanup(self) -> None:
-        pass
+        if not self.db:
+            self.connect()
+        if self.db.has_collection("voted_for"):
+            self.db.delete_collection("voted_for")
+        if self.db.has_collection("users"):
+            self.db.delete_collection("users")
+
+    def validate_load(self, expected_nodes: int = 7115, expected_rels: int = 103689) -> Tuple[bool, Dict[str, Any]]:
+        if not self.db:
+            self.connect()
+        nodes_cnt = self.db.collection("users").count() if self.db.has_collection("users") else 0
+        rels_cnt = self.db.collection("voted_for").count() if self.db.has_collection("voted_for") else 0
+        nodes_ok = nodes_cnt == expected_nodes
+        rels_ok = rels_cnt == expected_rels
+        valid = nodes_ok and rels_ok
+        return valid, {
+            "node_count": nodes_cnt,
+            "relationship_count": rels_cnt,
+            "valid_endpoints_count": rels_cnt,
+            "expected_nodes": expected_nodes,
+            "expected_relationships": expected_rels,
+            "valid": valid
+        }
