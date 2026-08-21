@@ -114,7 +114,8 @@ class Neo4jAdapter(BaseDatabaseAdapter):
                     self.connect()
                 with self.driver.session() as session:
                     res = session.run("CALL dbms.components() YIELD name, versions, edition RETURN versions[0] AS version, edition")
-                    rec = res.single()
+                    records = list(res)
+                    rec = records[0] if records else None
                     if rec:
                         version = f"{rec['version']} ({rec['edition']})"
             except Exception:
