@@ -9,7 +9,7 @@ sys.path.insert(0, str(project_root))
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, HRFlowable, KeepTogether
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, HRFlowable
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
@@ -155,21 +155,23 @@ def main():
 
     story = []
 
-    story.append(Spacer(1, 40))
+    story.append(Spacer(1, 30))
     story.append(Paragraph("PREPARED FOR WEXA AI | BENCHMARK ASSIGNMENT 1", cover_pretitle))
     story.append(Paragraph("COMPARATIVE GRAPH DATABASE BENCHMARK", cover_title))
     story.append(Paragraph("CognoDB Cloud vs Neo4j vs Memgraph vs FalkorDB vs ArangoDB", cover_subtitle))
-    story.append(HRFlowable(width="80%", thickness=2, color=colors.HexColor('#3498db'), spaceAfter=30))
+    story.append(HRFlowable(width="80%", thickness=2, color=colors.HexColor('#3498db'), spaceAfter=20))
 
     meta_table_data = [
         [Paragraph("<b>Target Dataset</b>", table_cell_style), Paragraph("SNAP Wiki-Vote Network", table_cell_style)],
         [Paragraph("<b>Graph Topology</b>", table_cell_style), Paragraph("7,115 Nodes | 103,689 Directed Relationships (VOTED_FOR)", table_cell_style)],
-        [Paragraph("<b>Canonical Dataset Hash</b>", table_cell_style), Paragraph("SHA-256: 713f082a7b1c25bbba160b3d17f8d114", table_cell_style)],
-        [Paragraph("<b>Resource Target</b>", table_cell_style), Paragraph("CognoDB Cloud c0 Tier Parity (0.50 vCPU, 256 MB RAM, 1 GB Storage)", table_cell_style)],
+        [Paragraph("<b>Nodes SHA-256</b>", table_cell_style), Paragraph("713f082a7b1c25bb0f61f1bb9432fbcb2270505d97de8e51087134996820a01a", table_cell_style)],
+        [Paragraph("<b>Relationships SHA-256</b>", table_cell_style), Paragraph("ba160b3d17f8d11469ebcc95364c5205e889ce934a3539d88d93e7037b1a8ebf", table_cell_style)],
+        [Paragraph("<b>Raw Dataset SHA-256</b>", table_cell_style), Paragraph("d2afbedf262126f820c6b3dd9f39a6d68e6f5ea839c0508297032ca77578b28a", table_cell_style)],
+        [Paragraph("<b>Resource Parity Profile</b>", table_cell_style), Paragraph("CognoDB Cloud c0 Tier (0.50 vCPU, 256 MB RAM, 1 GB Storage Allocation)", table_cell_style)],
         [Paragraph("<b>Client Environment</b>", table_cell_style), Paragraph("LAPTOP-2ID0MJRR (Windows 11 x64, Python 3.12.10)", table_cell_style)],
         [Paragraph("<b>Audit Status</b>", table_cell_style), Paragraph("PASS / RELEASE READY (Phase 10 Release & Security Verified)", table_cell_style)],
     ]
-    meta_table = Table(meta_table_data, colWidths=[160, 320])
+    meta_table = Table(meta_table_data, colWidths=[150, 330])
     meta_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8F9FA')),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
@@ -186,9 +188,9 @@ def main():
         "(<b>CognoDB Cloud</b>, <b>Neo4j</b>, <b>Memgraph</b>, <b>FalkorDB</b>, and <b>ArangoDB</b>) "
         "prepared specifically for the Wexa AI Take-Home Assignment. The benchmark measures data ingestion throughput, "
         "single-threaded graph traversal latencies (Q1-Q6), and multi-worker concurrent throughput scaling (c=1..16). "
-        "To ensure maximum scientific rigor, local container resources were explicitly constrained to match CognoDB Cloud's "
-        "free-tier profile (0.50 vCPU, 256 MB RAM, 1 GB storage allocation). Engine performance is evaluated neutrally "
-        "without assigning an unverified overall winner."
+        "To ensure maximum scientific rigor, local container resources were constrained using explicit Docker CPU and memory "
+        "limits to match CognoDB Cloud's free-tier profile (0.50 vCPU, 256 MB RAM, 1 GB storage allocation). Engine performance is "
+        "evaluated neutrally without assigning an unverified overall winner."
     )
     story.append(Paragraph(exec_summary, body_style))
     story.append(Spacer(1, 10))
@@ -197,29 +199,32 @@ def main():
     method_text = (
         "The evaluation utilizes the canonical <b>SNAP Wiki-Vote network</b> comprising <b>7,115 User nodes</b> and "
         "<b>103,689 directed VOTED_FOR relationships</b>. The dataset was normalized into canonical CSV structures and verified "
-        "using SHA-256 checksums (<code>713f082a7b1c25bbba160b3d17f8d114</code>). High-resolution nanosecond timing was "
-        "captured using <code>time.perf_counter()</code>. Warm-up runs were conducted prior to all measured iterations, "
-        "and strict referential integrity was validated before and after every workload run."
+        "using complete 64-character SHA-256 checksums (Nodes: <code>713f082a7b1c25bb0f61f1bb9432fbcb2270505d97de8e51087134996820a01a</code>, "
+        "Relationships: <code>ba160b3d17f8d11469ebcc95364c5205e889ce934a3539d88d93e7037b1a8ebf</code>). "
+        "High-resolution nanosecond timing was captured using <code>time.perf_counter()</code>. Warm-up runs were conducted prior to all "
+        "measured iterations, and strict referential integrity was validated before and after every workload run."
     )
     story.append(Paragraph(method_text, body_style))
     story.append(Spacer(1, 10))
 
     story.append(Paragraph("3. Resource Fairness & System Configurations", h1_style))
     resource_text = (
-        "Resource limits were enforced via Docker <code>deploy.resources.limits</code> to match CognoDB Cloud's free <code>c0</code> tier. "
-        "Any unavoidable technical differences (such as JVM memory overhead for Neo4j) are explicitly documented below."
+        "CPU (0.50 vCPU) and RAM (256 MB / 768 MB JVM) limits were enforced and verified using Docker <code>deploy.resources.limits</code> "
+        "and <code>docker inspect</code> via <code>scripts/verify_resource_limits.py</code>. Storage is specified as configured/allocated "
+        "data directory volume storage rather than a hard Docker block quota. Any unavoidable technical memory differences (such as JVM memory "
+        "overhead for Neo4j) are explicitly documented."
     )
     story.append(Paragraph(resource_text, body_style))
 
     fairness_table_data = [
-        [Paragraph("Database", table_header_style), Paragraph("Deployment", table_header_style), Paragraph("CPU Limit", table_header_style), Paragraph("RAM Limit", table_header_style), Paragraph("Storage", table_header_style), Paragraph("Protocol / Version", table_header_style)],
-        [Paragraph("ArangoDB", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB", table_cell_style), Paragraph("AQL / HTTP (v3.12.3)", table_cell_style)],
-        [Paragraph("Memgraph", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB", table_cell_style), Paragraph("Cypher / Bolt (v2.21.0)", table_cell_style)],
-        [Paragraph("FalkorDB", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB", table_cell_style), Paragraph("Cypher / Redis (v4.20.2)", table_cell_style)],
-        [Paragraph("Neo4j", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("768 MB*", table_cell_style), Paragraph("1.0 GB", table_cell_style), Paragraph("Cypher / Bolt (v5.26.0)", table_cell_style)],
-        [Paragraph("CognoDB Cloud", table_cell_style), Paragraph("Managed Cloud", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB", table_cell_style), Paragraph("Cypher / Bolt TLS", table_cell_style)],
+        [Paragraph("Database", table_header_style), Paragraph("Deployment", table_header_style), Paragraph("Verified CPU Limit", table_header_style), Paragraph("Verified RAM Limit", table_header_style), Paragraph("Storage Allocation", table_header_style), Paragraph("Protocol / Version", table_header_style)],
+        [Paragraph("ArangoDB", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB (Allocated)", table_cell_style), Paragraph("AQL / HTTP (v3.12.3)", table_cell_style)],
+        [Paragraph("Memgraph", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB (Allocated)", table_cell_style), Paragraph("Cypher / Bolt (v2.21.0)", table_cell_style)],
+        [Paragraph("FalkorDB", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB (Allocated)", table_cell_style), Paragraph("Cypher / Redis (v4.20.2)", table_cell_style)],
+        [Paragraph("Neo4j", table_cell_style), Paragraph("Local Docker", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("768 MB*", table_cell_style), Paragraph("1.0 GB (Allocated)", table_cell_style), Paragraph("Cypher / Bolt (v5.26.0)", table_cell_style)],
+        [Paragraph("CognoDB Cloud", table_cell_style), Paragraph("Managed Cloud", table_cell_style), Paragraph("0.50 vCPU", table_cell_style), Paragraph("256 MB", table_cell_style), Paragraph("1.0 GB (c0 Tier)", table_cell_style), Paragraph("Cypher / Bolt TLS", table_cell_style)],
     ]
-    t_fair = Table(fairness_table_data, colWidths=[70, 75, 60, 60, 65, 150])
+    t_fair = Table(fairness_table_data, colWidths=[70, 75, 75, 75, 80, 105])
     t_fair.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a2a3a')),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
@@ -227,7 +232,7 @@ def main():
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')])
     ]))
     story.append(t_fair)
-    story.append(Paragraph("* Note: Neo4j requires a minimum memory limit of 768 MB RAM due to Java JVM heap and metaspace overhead; 256/512 MB limits cause JVM startup crashes.", caption_style))
+    story.append(Paragraph("* Note: Neo4j requires a verified minimum memory limit of 768 MB RAM due to Java JVM heap and metaspace overhead; 256/512 MB limits cause JVM startup crashes.", caption_style))
     story.append(Spacer(1, 10))
 
     story.append(PageBreak())
@@ -321,7 +326,7 @@ def main():
         "• <b>In-Memory C/C++ Engines (Memgraph & FalkorDB)</b>: Delivered sub-millisecond query latencies (<1.2 ms). Memgraph demonstrated maximum throughput scaling up to 15,622.75 ops/sec at c=16.<br/>"
         "• <b>Disk-Backed Graph Engine (Neo4j)</b>: Sustained consistent low latency (2.3–4.4 ms) and linear concurrency scaling up to 1,087.30 ops/sec at c=16 under 768MB JVM allocation.<br/>"
         "• <b>Multi-Model Document-Graph Engine (ArangoDB)</b>: Achieved highest relationship bulk loading speed (42,705.60 rels/sec) and steady 15.64x concurrency scaling up to 351.35 ops/sec at c=16.<br/>"
-        "• <b>Managed Cloud Graph Engine (CognoDB Cloud)</b>: Demonstrated 14.22x concurrency scaling up to 39.81 ops/sec at c=16, while incurring ~250 ms network round-trip overhead due to WAN deployment."
+        "• <b>Managed Cloud Graph Engine (CognoDB Cloud)</b>: Demonstrated 14.22x concurrency scaling up to 39.81 ops/sec at c=16, with an observed latency floor of approximately 250 ms in this experiment, which includes WAN/network transmission overhead."
     )
     story.append(Paragraph(comp_text, body_style))
     story.append(Spacer(1, 10))
@@ -330,8 +335,8 @@ def main():
     cogno_analysis = (
         "CognoDB Cloud showed substantially higher observed latency in this experiment. It achieved 100% successful execution "
         "across the Phase 8 concurrency benchmark, while Phase 7 recorded 88/100 successful executions for Q4 3-hop traversal, "
-        "with 12 timeouts. Operating on the free c0 tier over a remote TLS connection, CognoDB Cloud's latency profile reflects "
-        "WAN round-trip network transmission rather than isolated database engine execution."
+        "with 12 timeouts. Operating on the free c0 tier over a remote TLS connection, CognoDB Cloud exhibited an observed latency "
+        "floor of approximately 250 ms in this experiment, which includes WAN/network transmission overhead."
     )
     story.append(Paragraph(cogno_analysis, body_style))
     story.append(Spacer(1, 10))
@@ -340,8 +345,8 @@ def main():
     limits_text = (
         "1. <b>Deployment Architecture Differences</b>: CognoDB Cloud was accessed over WAN, while comparison databases ran locally via Docker.<br/>"
         "2. <b>Single Dataset Scope</b>: Benchmarked strictly on SNAP Wiki-Vote network (7,115 nodes, 103,689 relationships).<br/>"
-        "3. <b>JVM Memory Threshold</b>: Neo4j required 768 MB RAM minimum to prevent JVM startup memory failure, while C/C++ engines ran at 256 MB RAM.<br/>"
-        "4. <b>Concurrency Trajectory</b>: FalkorDB peaked at c=4 (3,724.85 ops/sec) and declined at higher concurrency levels due to internal Redis thread scheduling."
+        "3. <b>JVM Memory Threshold</b>: Neo4j required a verified minimum memory limit of 768 MB RAM due to Java JVM heap/metaspace overhead, while C/C++ engines ran at 256 MB RAM.<br/>"
+        "4. <b>Concurrency Trajectory</b>: FalkorDB peaked at c=4 (3,724.85 ops/sec) and declined at higher tested concurrency levels. The benchmark does not establish the underlying cause."
     )
     story.append(Paragraph(limits_text, body_style))
     story.append(Spacer(1, 10))
@@ -393,12 +398,12 @@ def main():
         "sha256": pdf_sha256,
         "generated_from": "final fair-resource benchmark results",
         "status": "verified",
-        "timestamp": "2026-08-21T23:54:00Z"
+        "timestamp": "2026-08-21T23:58:00Z"
     }
     with open(manifest_file, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
 
-    print(f"Generated publication PDF successfully at {pdf_path}", flush=True)
+    print(f"Generated corrected publication PDF successfully at {pdf_path}", flush=True)
     print(f"PDF Size: {len(pdf_bytes)} bytes", flush=True)
     print(f"PDF SHA-256: {pdf_sha256}", flush=True)
 

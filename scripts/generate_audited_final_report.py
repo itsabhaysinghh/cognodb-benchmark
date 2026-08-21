@@ -59,19 +59,23 @@ The benchmark environment was configured to ensure strict reproducibility across
 The benchmark utilized the canonical **SNAP Wiki-Vote dataset**:
 - **Nodes**: 7,115 (`User` vertices)
 - **Relationships**: 103,689 (`VOTED_FOR` directed edges)
-- **Canonical Hash**: SHA-256 validated prior to and following every test phase.
+- **Raw File SHA-256**: `d2afbedf262126f820c6b3dd9f39a6d68e6f5ea839c0508297032ca77578b28a`
+- **Nodes CSV SHA-256**: `713f082a7b1c25bb0f61f1bb9432fbcb2270505d97de8e51087134996820a01a`
+- **Relationships CSV SHA-256**: `ba160b3d17f8d11469ebcc95364c5205e889ce934a3539d88d93e7037b1a8ebf`
 
 ---
 
-## 4. Database Environments
+## 4. Database Environments & Resource Fairness
 
-| Database | Version / Distribution | Deployment Model | Interface Protocol |
-| :--- | :--- | :--- | :--- |
-| **CognoDB Cloud** | Managed Cloud | Remote Managed Cloud | Cypher / Bolt TLS |
-| **Neo4j** | 5.26.0 Community | Local Docker Container | Cypher / Bolt TCP |
-| **Memgraph** | Community Edition | Local Docker Container | Cypher / Bolt TCP |
-| **FalkorDB** | Community Edition | Local Docker Container | Cypher / Falkor Redis Protocol |
-| **ArangoDB** | 3.12.3 Community | Local Docker Container | AQL / HTTP REST |
+| Database | Version / Distribution | Deployment Model | CPU Limit | RAM Limit | Storage Allocation | Interface Protocol |
+| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
+| **CognoDB Cloud** | Managed Cloud | Remote Managed Cloud | 0.50 vCPU | 256 MB | 1.0 GB (c0 Tier) | Cypher / Bolt TLS |
+| **Neo4j** | 5.26.0 Community | Local Docker Container | 0.50 vCPU | 768 MB* | 1.0 GB (Allocated) | Cypher / Bolt TCP |
+| **Memgraph** | Community Edition | Local Docker Container | 0.50 vCPU | 256 MB | 1.0 GB (Allocated) | Cypher / Bolt TCP |
+| **FalkorDB** | Community Edition | Local Docker Container | 0.50 vCPU | 256 MB | 1.0 GB (Allocated) | Cypher / Falkor Redis |
+| **ArangoDB** | 3.12.3 Community | Local Docker Container | 0.50 vCPU | 256 MB | 1.0 GB (Allocated) | AQL / HTTP REST |
+
+*\* Note: CPU (0.50 vCPU) and RAM (256 MB / 768 MB JVM) limits were enforced and verified using Docker deploy.resources.limits and docker inspect via scripts/verify_resource_limits.py. Storage is specified as configured/allocated data directory volume storage rather than a hard Docker block quota. Neo4j requires a verified minimum memory limit of 768 MB RAM due to Java JVM heap/metaspace overhead.*
 
 ---
 
@@ -145,7 +149,7 @@ Evaluated across 5 databases × 4 workloads × 5 concurrency levels `[1, 2, 4, 8
 ## 9. Comparative Analysis
 
 - **In-Memory Engines (Memgraph & FalkorDB)**: Both in-memory systems demonstrated low latency for graph traversals (<1.2 ms for 1-hop to 3-hop queries). Memgraph scaled throughput up to 15,622.75 ops/sec at c=16.
-- **Disk-Backed Enterprise Engine (Neo4j)**: Neo4j achieved low query latencies (2.3–4.4 ms across Q1-Q6) and sustained throughput scaling up to 1,087.30 ops/sec at c=16.
+- **Disk-Backed Enterprise Engine (Neo4j)**: Neo4j achieved low query latencies (2.3–4.4 ms across Q1-Q6) and sustained throughput scaling up to 1,087.30 ops/sec at c=16 under 768 MB JVM allocation.
 - **Multi-Model Document-Graph Engine (ArangoDB)**: ArangoDB demonstrated fastest bulk relationship loading (42,705.60 rels/sec) in Phase 6 and consistent throughput gains with concurrency (increasing from 22.46 ops/sec at c=1 to 351.35 ops/sec at c=16).
 
 ---
@@ -171,8 +175,8 @@ All 5 databases maintained 100% graph integrity before and after every workload 
 
 1. **Deployment Architecture Differences**: CognoDB Cloud was accessed remotely, while the comparison databases were deployed locally. The observed latency therefore includes network and deployment effects in addition to database execution time.
 2. **Single Dataset Scope**: The evaluation used one dataset (SNAP Wiki-Vote: 7,115 nodes, 103,689 relationships).
-3. **Concurrency Trajectory**: FalkorDB reached its highest measured point-lookup throughput at c=4 (3,724.85 ops/sec) and declined at higher tested concurrency levels. The benchmark does not establish the underlying cause.
-4. **Deployment Resource Differences**: The local databases were executed using the available Docker host resources, while CognoDB Cloud resources were managed remotely. Direct CPU, memory, and storage equivalence could not be established.
+3. **Concurrency Trajectory**: FalkorDB peaked at c=4 (3,724.85 ops/sec) and declined at higher tested concurrency levels. The benchmark does not establish the underlying cause.
+4. **Deployment Resource Differences**: The local databases were executed using Docker resource limits, while CognoDB Cloud resources were managed remotely. Direct CPU, memory, and storage equivalence could not be established.
 5. **Protocol and Architecture Differences**: The databases use different client protocols and database architectures. These differences are part of the observed system performance and should not be interpreted as pure storage-engine performance.
 6. **Workload Scope**: The benchmark covers the selected ingest, traversal, lookup, aggregation, concurrent-read, and mixed read/write workloads. It does not represent every possible production workload.
 7. **Dataset Generalizability**: Results from the SNAP Wiki-Vote graph should not automatically be generalized to larger graphs, denser graphs, weighted graphs, or graphs with different structural characteristics.
@@ -210,7 +214,7 @@ This benchmark highlights category-specific strengths across the tested graph da
     with open(report_file, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print(f"Updated final report at {report_file} successfully.")
+    print(f"Updated final report markdown at {report_file} successfully.")
 
 if __name__ == "__main__":
     main()
