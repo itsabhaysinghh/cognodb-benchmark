@@ -1,264 +1,141 @@
-# Comparative Graph Database Benchmark Framework
+# Comparative Graph Database Benchmark
 
-A comprehensive, reproducible performance benchmarking framework comparing five graph databases (**CognoDB Cloud**, **Neo4j**, **Memgraph**, **FalkorDB**, and **ArangoDB**) using the canonical **SNAP Wiki-Vote** dataset.
+## Overview
+This repository provides a reproducible, empirical benchmark comparing five graph database systems: **CognoDB Cloud**, **Neo4j**, **Memgraph**, **FalkorDB**, and **ArangoDB**.
 
----
+The evaluation uses the canonical **SNAP Wiki-Vote dataset** comprising **7,115 User nodes** and **103,689 directed VOTED_FOR relationships**.
 
-## 1. Project Purpose
-The purpose of this framework is to provide a fair, transparent, and reproducible comparative benchmark evaluating data ingestion throughput, single-threaded graph query and traversal latencies, and multi-worker concurrent throughput scaling across diverse graph database engines.
-
----
-
-## 2. Benchmark Scope
-The benchmark spans three evaluation phases:
-- **Phase 6 — Data Ingestion**: Bulk loading speed of nodes and relationships across 3 clean independent runs per database.
-- **Phase 7 — Graph Query & Traversal**: Single-threaded execution of 6 workloads (`Q1_POINT_LOOKUP`, `Q2_1HOP_TRAVERSAL`, `Q3_2HOP_TRAVERSAL`, `Q4_3HOP_TRAVERSAL`, `Q5_FILTERED_LOOKUP`, `Q6_AGGREGATION`) across 100 measured queries + 10 warm-ups per workload.
-- **Phase 8 — Concurrency & Scaling**: Multi-threaded execution across 4 workloads (`CONCURRENT_POINT_LOOKUP`, `CONCURRENT_1HOP`, `MIXED_READ`, `MIXED_READ_WRITE`) and 5 concurrency levels (`c=1, 2, 4, 8, 16`) using persistent connection pools.
+The framework benchmarks performance across three core areas: data ingestion throughput, single-threaded graph query and traversal latencies, and multi-worker concurrent throughput scaling.
 
 ---
 
-## 3. Dataset
-The canonical dataset is derived from the **SNAP Wiki-Vote** network:
-- **Nodes**: `7,115` (`User` vertices)
-- **Relationships**: `103,689` (`VOTED_FOR` directed edges)
-- **Canonical Files**:
-  - `data/processed/nodes.csv`
-  - `data/processed/relationships.csv`
-  - `data/processed/dataset_manifest.json`
+## Benchmark Scope
+
+| Benchmark Phase | Scope & Objective | Key Metrics Captured |
+| :--- | :--- | :--- |
+| **Phase 6 — Ingestion** | Bulk loading of nodes and relationships across 3 clean runs per database. | Schema time, index time, node load, relationship load, total time, rel/sec throughput. |
+| **Phase 7 — Query & Traversal** | Single-threaded execution of 6 workloads (Q1-Q6) across 100 iterations + 10 warm-ups. | Mean, median/p50, p90, p95, p99, min, max, success rate, query correctness. |
+| **Phase 8 — Concurrency** | Multi-worker execution across 4 workloads and 5 concurrency levels (c=1, 2, 4, 8, 16). | Throughput (ops/sec), p50/p95 latency scaling, success rate, graph state integrity. |
+| **Phase 9 — Comparative Analysis** | Neutral workload-specific comparative analysis, charts, and publication PDF report. | High-res PNG charts, final report Markdown, ReportLab publication PDF report. |
+| **Phase 10 — Security & Release** | Verification of dataset hashes, secret scanning, dependency pinning, and release audit. | Release gate verification matrix, security audit report, reproducibility manifest. |
 
 ---
 
-## 4. Database Systems Tested
-1. **CognoDB Cloud**: Remote managed cloud graph database (Cypher / Bolt TLS).
-2. **Neo4j**: 5.26.0 Community Edition (Cypher / Bolt TCP).
-3. **Memgraph**: Community Edition (Cypher / Bolt TCP).
-4. **FalkorDB**: v4.20.2 Community Edition (Cypher / Falkor Redis Protocol).
-5. **ArangoDB**: 3.12.3 Community Edition (AQL / HTTP REST).
+## Key Results
+
+Based strictly on empirical execution data from the authoritative benchmark results:
+
+- **Ingestion Throughput**: **ArangoDB** achieved the highest measured relationship ingestion throughput (**42,705.60 rels/sec**).
+- **Single-Threaded Query Latency**: **FalkorDB** achieved the lowest measured latency in the tested single-threaded workloads (**0.49 ms** Q1 point lookup, **0.95 ms** Q4 3-hop traversal).
+- **Concurrent Point-Lookup Throughput**: **Memgraph** achieved the highest measured throughput in the tested concurrent point-lookup workload (**15,622.75 ops/sec** at c=16).
+- **Managed Cloud & Remote Effects**: **CognoDB Cloud** exhibited an observed latency floor of approximately 250 ms in this experiment, which includes WAN/network transmission overhead.
+- **Reliability & Timeouts**: CognoDB Cloud achieved 100% successful execution across the Phase 8 concurrency benchmark, while Phase 7 recorded 88/100 successful executions for Q4 3-hop traversal, with 12 timeouts over WAN.
+
+*Note: In accordance with scientific methodology, no universal "overall winner" is assigned because performance varies by workload and deployment architecture.*
 
 ---
 
-## 5. Architecture
+## Environment
+
+- **Client Environment**: LAPTOP-2ID0MJRR (Windows 11 Enterprise x64)
+- **Python Version**: Python 3.12.10 x64
+- **Container Isolation**: Docker Compose
+- **Resource Constraints**:
+  - **CPU Limit**: Enforced at `0.50 vCPU` for local containers (`deploy.resources.limits`).
+  - **RAM Limit**: Enforced at `256 MB RAM` for Memgraph, FalkorDB, and ArangoDB. Neo4j required a verified minimum limit of `768 MB RAM` due to Java JVM heap and metaspace operational requirements.
+  - **Storage Allocation**: Configured at `1.0 GB` data directory volume allocation.
+
+---
+
+## Repository Structure
+
 ```
 cognodb-benchmark/
-├── benchmark/
-│   ├── timing.py
-│   ├── validation.py
-│   ├── ingest.py
-│   ├── query_workloads.py
-│   ├── query_engine.py
-│   ├── concurrent_workloads.py
-│   └── concurrent_engine.py
-├── config/
-│   └── fairness_record.yaml
-├── data/
+├── benchmark/              # Core timing, validation, query, and concurrency engines
+├── databases/              # Adapter implementations (CognoDB, Neo4j, Memgraph, FalkorDB, ArangoDB)
+├── scripts/                # Verification, benchmark execution, and report generation scripts
+├── config/                 # Fairness records and database parameters
+├── data/                   # Raw and normalized SNAP Wiki-Vote dataset files
+├── results/                # Raw JSON execution logs and processed benchmark summaries
 │   ├── raw/
 │   └── processed/
-├── databases/
-│   ├── base.py
-│   ├── cognodb.py
-│   ├── neo4j.py
-│   ├── memgraph.py
-│   ├── falkordb.py
-│   └── arangodb.py
-├── docker-compose.yml
-├── requirements.txt
-├── .env.example
-├── reports/
-│   ├── phase10_release_audit.md
-│   └── phase10_release_audit.json
-├── results/
-│   ├── raw/
-│   └── processed/
-└── scripts/
+├── reports/                # Security audit and Wexa AI compliance reports
+├── docker-compose.yml      # Local container orchestration with resource limits
+├── requirements.txt        # Pinned Python dependencies
+├── .env.example            # Environment configuration template with placeholders
+└── Comparative_Graph_Database_Benchmark_Report.pdf  # Authoritative publication PDF
 ```
 
 ---
 
-## 6. Installation
+## Requirements
 
-Clone the repository and set up a Python 3.12 virtual environment:
-
-```bash
-git clone <repository-url>
-cd cognodb-benchmark
-python -m venv .venv
-```
-
-Activate virtual environment:
-- Windows (PowerShell):
-  ```powershell
-  .venv\Scripts\Activate.ps1
-  ```
-- Linux / macOS:
-  ```bash
-  source .venv/bin/activate
-  ```
-
-Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+- **Python**: Version 3.12 or higher
+- **Docker**: Docker Desktop with Docker Compose V2 support
+- **Git**: Git 2.30 or higher
 
 ---
 
-## 7. Environment Configuration
+## Configuration
 
-Copy `.env.example` to `.env` and fill in connection details:
+Copy `.env.example` to create your local `.env` file:
 
 ```bash
 cp .env.example .env
 ```
 
-Example `.env` configuration:
-```env
-COGNODB_URI=bolt+s://your-cognodb-host
-COGNODB_USERNAME=cognodb
-COGNODB_PASSWORD=your_cloud_password
+Define database endpoints and connection credentials in `.env`:
+- `COGNODB_URI`, `COGNODB_USERNAME`, `COGNODB_PASSWORD`
+- `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`
+- `MEMGRAPH_URI`, `MEMGRAPH_USERNAME`, `MEMGRAPH_PASSWORD`
+- `FALKORDB_URI`, `FALKORDB_USERNAME`, `FALKORDB_PASSWORD`
+- `ARANGODB_URI`, `ARANGODB_USERNAME`, `ARANGODB_PASSWORD`, `ARANGODB_DATABASE`
 
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=local_dev_password
-
-MEMGRAPH_URI=bolt://localhost:7688
-MEMGRAPH_USERNAME=
-MEMGRAPH_PASSWORD=
-
-FALKORDB_URI=falkor://localhost:6379
-FALKORDB_USERNAME=
-FALKORDB_PASSWORD=
-
-ARANGODB_URI=http://localhost:8529
-ARANGODB_USERNAME=root
-ARANGODB_PASSWORD=local_dev_password
-ARANGODB_DATABASE=_system
-```
+*Security Note: `.env` is ignored by Git and must never be committed. `.env.example` contains placeholders only.*
 
 ---
 
-## 8. Docker Setup
+## Running the Benchmark
 
-Start local database containers:
+Follow this copy-pasteable execution sequence:
 
+### 1. Install Dependencies
 ```bash
-docker compose up -d
-```
-
-Verify container status:
-```bash
-docker compose ps
-```
-
----
-
-## 9. Dataset Validation
-
-Validate the SHA-256 hash and manifest of the canonical dataset:
-
-```bash
-python -c "from benchmark.validation import DatasetValidator; from pathlib import Path; v=DatasetValidator(Path('.')); print(v.validate())"
-```
-
----
-
-## 10. Dataset Normalization
-
-To re-process raw SNAP data into canonical CSV format:
-
-```bash
-python scripts/normalize_dataset.py
-```
-
----
-
-## 11. Database Connection Verification
-
-Test reachability across all database environments:
-
-```bash
-python scripts/check_database_environments.py
-```
-
----
-
-## 12. Phase 6 Benchmark Execution (Ingestion)
-
-Run 15 clean ingestion runs across all 5 databases:
-
-```bash
-python scripts/run_full_benchmark.py
-```
-
-Results are saved to `results/processed/ingest_benchmark_summary.json`.
-
----
-
-## 13. Phase 7 Benchmark Execution (Query Latency)
-
-Run the single-threaded 6-workload query benchmark:
-
-```bash
-python scripts/run_final_query_benchmark.py
-```
-
-Results are saved to `results/processed/query_benchmark_final_summary.json`.
-
----
-
-## 14. Phase 8 Benchmark Execution (Concurrency)
-
-Run the multi-threaded concurrency scaling benchmark across 5 databases × 4 workloads × 5 concurrency levels (`c=1..16`):
-
-```bash
-python scripts/run_full_phase8_benchmark.py
-```
-
-Results are saved to `results/processed/phase8/concurrency_benchmark_final_summary.json`.
-
----
-
-## 15. Phase 9 Report Generation
-
-Generate high-resolution PNG charts and compile the final benchmark markdown and PDF reports:
-
-```bash
-python scripts/generate_phase9_charts.py
-python scripts/generate_audited_final_report.py
-python scripts/generate_walkthrough_pdf.py
-```
-
-Outputs:
-- Charts: `results/processed/phase9/charts/`
-- Markdown Report: `results/processed/phase9/final_benchmark_report.md`
-- PDF Publication Report: `results/processed/phase9/Comparative_Graph_Database_Benchmark_Report.pdf`
-
----
-
-## 16. Result Locations
-- Raw Run Data: `results/raw/`
-- Phase 6 Summary: `results/processed/ingest_benchmark_summary.json`
-- Phase 7 Summary: `results/processed/query_benchmark_final_summary.json`
-- Phase 8 Summary: `results/processed/phase8/concurrency_benchmark_final_summary.json`
-- Phase 9 Reports: `results/processed/phase9/`
-
----
-
-## 17. Reproducibility Instructions
-To completely reproduce the full benchmark suite end-to-end:
-
-```bash
-# 1. Environment & Docker
 pip install -r requirements.txt
+```
+
+### 2. Start Local Database Containers
+```bash
 docker compose up -d
+```
 
-# 2. Connection & Dataset Verification
+### 3. Verify Container Resource Limits
+```bash
+python scripts/verify_resource_limits.py
+```
+
+### 4. Verify Database Connections
+```bash
 python scripts/check_database_environments.py
+```
 
-# 3. Benchmark Execution
+### 5. Execute Phase 6 (Ingestion Benchmark)
+```bash
 python scripts/run_full_benchmark.py
-python scripts/run_final_query_benchmark.py
-python scripts/run_full_phase8_benchmark.py
+```
 
-# 4. Analysis & PDF Generation
+### 6. Execute Phase 7 (Single-Threaded Query Benchmark)
+```bash
+python scripts/run_final_query_benchmark.py
+```
+
+### 7. Execute Phase 8 (Concurrency Benchmark)
+```bash
+python scripts/run_full_phase8_benchmark.py
+```
+
+### 8. Generate Phase 9 Charts & Reports
+```bash
 python scripts/generate_phase9_charts.py
 python scripts/generate_audited_final_report.py
 python scripts/generate_walkthrough_pdf.py
@@ -266,22 +143,56 @@ python scripts/generate_walkthrough_pdf.py
 
 ---
 
-## 18. Security Notes
-- Never commit `.env` files containing real production passwords.
-- `.env` is ignored in `.gitignore`.
-- Benchmark scripts and result files never store or log passwords or tokens.
+## Results & Reports
+
+Authoritative benchmark outputs are located in:
+
+- **Processed JSON Summaries**: [`results/processed/`](file:///d:/New%20folder/cognodb-benchmark/results/processed/)
+  - Ingestion Summary: `ingest_benchmark_summary.json`
+  - Query Summary: `query_benchmark_final_summary.json`
+  - Concurrency Summary: `phase8/concurrency_benchmark_final_summary.json`
+- **Raw Execution Logs**: [`results/raw/`](file:///d:/New%20folder/cognodb-benchmark/results/raw/) (Every run preserved with unique run ID)
+- **Compliance & Security Reports**: [`reports/`](file:///d:/New%20folder/cognodb-benchmark/reports/)
+  - Security Audit: `final_security_audit.md` (`SAFE TO PUBLISH`)
+  - Wexa Compliance: `final_assignment_compliance.md` (`PASS`)
+- **Publication PDF Report**: [`Comparative_Graph_Database_Benchmark_Report.pdf`](file:///d:/New%20folder/cognodb-benchmark/Comparative_Graph_Database_Benchmark_Report.pdf)
 
 ---
 
-## 19. Limitations
-1. **Deployment Architecture Differences**: Remote Cloud WAN vs Local Docker loopback sockets.
-2. **Single Dataset Scope**: SNAP Wiki-Vote network (7,115 nodes, 103,689 relationships).
-3. **Hardware & Resource Allocation**: Docker container host resources vs managed cloud instance resources.
-4. **Descriptive Statistics**: Reports empirical descriptive metrics without inferential statistical hypothesis testing.
+## Reproducibility
+
+- **Canonical Dataset**: Normalized into deterministic `nodes.csv` and `relationships.csv`.
+- **Dataset Integrity**: Verified via SHA-256 hashes (`Nodes: 713f082a...`, `Relationships: ba160b3d...`).
+- **State Integrity**: 100% node and relationship count verification before and after write workloads.
+- **Timing Accuracy**: Monotonic high-resolution nanosecond timing using `time.perf_counter()`.
+- **Warm-Up Protocol**: 10 non-measured warm-up iterations executed prior to recorded runs.
 
 ---
 
-## 20. Citation & Reference Information
-- Dataset Source: Stanford Network Analysis Project (SNAP) — Wiki-Vote network dataset.
-- Cypher Query Language: OpenCypher Standards.
-- ArangoDB Query Language: ArangoDB AQL Documentation.
+## Security
+
+- Zero hardcoded passwords, tokens, API keys, or authenticated connection strings in source code.
+- `.env` is listed in `.gitignore` and ignored by Git.
+- Benchmark outputs log standard runtime metadata only and exclude connection secrets.
+- Full security audit verified repository safety for public publication (`SAFE TO PUBLISH`).
+
+---
+
+## Limitations
+
+1. **Deployment Architecture**: CognoDB Cloud was accessed over a remote WAN network, whereas comparison databases ran locally via Docker containers over loopback sockets.
+2. **Single Dataset Scope**: Evaluation conducted on the SNAP Wiki-Vote graph (7,115 nodes, 103,689 relationships).
+3. **Neo4j RAM Requirement**: Neo4j required 768 MB RAM minimum to prevent JVM startup memory failure, while C/C++ engines operated at 256 MB RAM.
+4. **FalkorDB Concurrency Trajectory**: FalkorDB throughput peaked at c=4 (3,724.85 ops/sec) and declined at higher tested concurrency levels; the benchmark does not establish the underlying cause.
+
+---
+
+## Assignment Information
+This project was developed for the **Wexa AI Take-Home Benchmark Assignment 1**.
+
+---
+
+## Final Report
+Reviewers are encouraged to inspect the complete, 7-page publication PDF report:
+
+📄 **[`Comparative_Graph_Database_Benchmark_Report.pdf`](file:///d:/New%20folder/cognodb-benchmark/Comparative_Graph_Database_Benchmark_Report.pdf)** (SHA-256: `9293f8e43b8ece7b06a8be4d4724a4c1a25fc8eb56b4bd078be535b2b2598b5f`)
