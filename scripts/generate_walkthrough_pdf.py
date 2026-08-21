@@ -164,10 +164,10 @@ def main():
     meta_table_data = [
         [Paragraph("<b>Target Dataset</b>", table_cell_style), Paragraph("SNAP Wiki-Vote Network", table_cell_style)],
         [Paragraph("<b>Graph Topology</b>", table_cell_style), Paragraph("7,115 Nodes | 103,689 Directed Relationships (VOTED_FOR)", table_cell_style)],
-        [Paragraph("<b>Nodes SHA-256</b>", table_cell_style), Paragraph("713f082a7b1c25bb0f61f1bb9432fbcb2270505d97de8e51087134996820a01a", table_cell_style)],
-        [Paragraph("<b>Relationships SHA-256</b>", table_cell_style), Paragraph("ba160b3d17f8d11469ebcc95364c5205e889ce934a3539d88d93e7037b1a8ebf", table_cell_style)],
+        [Paragraph("<b>Nodes CSV SHA-256</b>", table_cell_style), Paragraph("713f082a7b1c25bb0f61f1bb9432fbcb2270505d97de8e51087134996820a01a", table_cell_style)],
+        [Paragraph("<b>Relationships CSV SHA-256</b>", table_cell_style), Paragraph("ba160b3d17f8d11469ebcc95364c5205e889ce934a3539d88d93e7037b1a8ebf", table_cell_style)],
         [Paragraph("<b>Raw Dataset SHA-256</b>", table_cell_style), Paragraph("d2afbedf262126f820c6b3dd9f39a6d68e6f5ea839c0508297032ca77578b28a", table_cell_style)],
-        [Paragraph("<b>Resource Parity Profile</b>", table_cell_style), Paragraph("CognoDB Cloud c0 Tier (0.50 vCPU, 256 MB RAM, 1 GB Storage Allocation)", table_cell_style)],
+        [Paragraph("<b>Resource Parity Profile</b>", table_cell_style), Paragraph("CognoDB Cloud c0 Tier (0.50 vCPU, 256 MB RAM, 1.0 GB Allocated Storage)", table_cell_style)],
         [Paragraph("<b>Client Environment</b>", table_cell_style), Paragraph("LAPTOP-2ID0MJRR (Windows 11 x64, Python 3.12.10)", table_cell_style)],
         [Paragraph("<b>Audit Status</b>", table_cell_style), Paragraph("PASS / RELEASE READY (Phase 10 Release & Security Verified)", table_cell_style)],
     ]
@@ -189,7 +189,7 @@ def main():
         "prepared specifically for the Wexa AI Take-Home Assignment. The benchmark measures data ingestion throughput, "
         "single-threaded graph traversal latencies (Q1-Q6), and multi-worker concurrent throughput scaling (c=1..16). "
         "To ensure maximum scientific rigor, local container resources were constrained using explicit Docker CPU and memory "
-        "limits to match CognoDB Cloud's free-tier profile (0.50 vCPU, 256 MB RAM, 1 GB storage allocation). Engine performance is "
+        "limits to match CognoDB Cloud's free-tier profile (0.50 vCPU, 256 MB RAM, 1.0 GB allocated storage). Engine performance is "
         "evaluated neutrally without assigning an unverified overall winner."
     )
     story.append(Paragraph(exec_summary, body_style))
@@ -201,7 +201,7 @@ def main():
         "<b>103,689 directed VOTED_FOR relationships</b>. The dataset was normalized into canonical CSV structures and verified "
         "using complete 64-character SHA-256 checksums (Nodes: <code>713f082a7b1c25bb0f61f1bb9432fbcb2270505d97de8e51087134996820a01a</code>, "
         "Relationships: <code>ba160b3d17f8d11469ebcc95364c5205e889ce934a3539d88d93e7037b1a8ebf</code>). "
-        "High-resolution nanosecond timing was captured using <code>time.perf_counter()</code>. Warm-up runs were conducted prior to all "
+        "High-resolution monotonic timing was captured using <code>time.perf_counter()</code>. Warm-up runs were conducted prior to all "
         "measured iterations, and strict referential integrity was validated before and after every workload run."
     )
     story.append(Paragraph(method_text, body_style))
@@ -210,7 +210,7 @@ def main():
     story.append(Paragraph("3. Resource Fairness & System Configurations", h1_style))
     resource_text = (
         "CPU (0.50 vCPU) and RAM (256 MB / 768 MB JVM) limits were enforced and verified using Docker <code>deploy.resources.limits</code> "
-        "and <code>docker inspect</code> via <code>scripts/verify_resource_limits.py</code>. Storage is specified as configured/allocated "
+        "and <code>docker inspect</code> via <code>scripts/verify_resource_limits.py</code>. Storage is specified as 1.0 GB allocated/configured "
         "data directory volume storage rather than a hard Docker block quota. Any unavoidable technical memory differences (such as JVM memory "
         "overhead for Neo4j) are explicitly documented."
     )
@@ -232,7 +232,7 @@ def main():
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')])
     ]))
     story.append(t_fair)
-    story.append(Paragraph("* Note: Neo4j requires a verified minimum memory limit of 768 MB RAM due to Java JVM heap and metaspace overhead; 256/512 MB limits cause JVM startup crashes.", caption_style))
+    story.append(Paragraph("* Note: Neo4j required a verified minimum memory limit of 768 MB RAM due to Java JVM heap and metaspace operational requirements; 256/512 MB limits cause JVM startup crashes.", caption_style))
     story.append(Spacer(1, 10))
 
     story.append(PageBreak())
@@ -286,7 +286,7 @@ def main():
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')])
     ]))
     story.append(t_query)
-    story.append(Paragraph("* Note: CognoDB Q4 latency statistics are computed from 88 successful samples. 12 executions timed out during 3-hop WAN traversal.", caption_style))
+    story.append(Paragraph("* Note: Latency statistics for CognoDB Q4 are calculated strictly from the 88 successful latency samples. 12 query executions timed out during 3-hop traversal expansion over WAN and were excluded from latency stats.", caption_style))
     story.append(Spacer(1, 10))
 
     story.append(PageBreak())
@@ -398,12 +398,12 @@ def main():
         "sha256": pdf_sha256,
         "generated_from": "final fair-resource benchmark results",
         "status": "verified",
-        "timestamp": "2026-08-21T23:58:00Z"
+        "timestamp": "2026-08-22T00:01:00Z"
     }
     with open(manifest_file, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
 
-    print(f"Generated corrected publication PDF successfully at {pdf_path}", flush=True)
+    print(f"Generated publication PDF successfully at {pdf_path}", flush=True)
     print(f"PDF Size: {len(pdf_bytes)} bytes", flush=True)
     print(f"PDF SHA-256: {pdf_sha256}", flush=True)
 

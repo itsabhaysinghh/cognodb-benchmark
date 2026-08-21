@@ -117,7 +117,7 @@ class FalkorDBAdapter(BaseDatabaseAdapter):
                     self.connect()
                 info = self.graph.query("CALL db.info()")
                 if info and info.result_set:
-                    version = "FalkorDB Community"
+                    version = "FalkorDB v4.20.2"
             except Exception:
                 pass
         return {
